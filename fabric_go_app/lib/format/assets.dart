@@ -1,31 +1,31 @@
 class Asset{
-  String UniName;
+  String University;
   String ID;
-  String Name;
-  String Major;
+  String StudentName;
   int Credit;
+  bool GradStatus;
 
   Asset(
-      this.UniName,
+      this.University,
       this.ID,
-      this.Name,
-      this.Major,
+      this.StudentName,
       this.Credit,
+      this.GradStatus,
   );
 
   factory Asset.fromJson(Map<String,dynamic>json)=> Asset(
-      json["uniName"],
-      json["ID"],
-      json["name"],
-      json["major"],
-      json["credit"],
+    json['University'],
+    json['ID'],
+    json['StudentName'],
+    json['Credit'],
+    json['GradStatus'],
   );
 
   Map<String,dynamic> toJson()=>{
-    "uniName":UniName.toString(),
-    "ID":ID.toString(),
-    "name":Name.toString(),
-    "major":Major.toString(),
-    "credit":Credit.toString(),
+    'University':University.toString(),
+    'ID':ID.toString(),
+    'StudentName':StudentName.toString(),
+    'Credit':Credit.toString(),
+    'GradStatus':GradStatus.toString(),
   };
 }

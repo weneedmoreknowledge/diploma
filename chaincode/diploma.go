@@ -4,6 +4,7 @@ import (
   "fmt"
   "encoding/json"
   "log"
+  "strconv"
   "github.com/hyperledger/fabric-contract-api-go/contractapi"
 )
 
@@ -18,7 +19,6 @@ type Asset struct {
   StudentName     string `json:"StudentName"`
   Credit          int    `json:"Credit"`
   GradStatus      bool   `json:"GradStatus"`
-  Owner           string `json:"Owner"`
 }
 
 func main() {
@@ -39,7 +39,9 @@ func main() {
 // InitLedger adds a base set of assets to the ledger
 func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) error {
   assets := []Asset{
-    { University:"Genesis",ID: "Genesis ID",StudentName:"Genesis Name",Credit:5, GradStatus:false, Owner: "Genesis"},
+    { University:"Genesis1", ID: "1", StudentName:"Genesis Name1", Credit:0, GradStatus:false},
+    { University:"Genesis2", ID: "2", StudentName:"Genesis Name2", Credit:0, GradStatus:false},
+    { University:"Genesis3", ID: "3", StudentName:"Genesis Name3", Credit:0, GradStatus:false},
   }
 
   for _, asset := range assets {
@@ -57,8 +59,25 @@ func (s *SmartContract) InitLedger(ctx contractapi.TransactionContextInterface) 
   return nil
 }
 
+func (cc *SmartContract) RequireConsent(ctx contractapi.TransactionContextInterface, receiver string) (bool, error) {
+	//Org := receiver // Specify the recipient organization's name
+
+	// Invoke the consent chaincode on the recipient organization's peer
+	response1:= ctx.GetStub().InvokeChaincode("basic", [][]byte{[]byte("checkConsent")},"myChannel")
+
+	consent, err := strconv.ParseBool(string(response1.Payload))
+	if err != nil {
+		return false, fmt.Errorf("Failed to parse consent value: %v", err)
+	}
+
+  print(consent)
+  
+  return consent,nil
+}
+
 // CreateAsset issues a new asset to the world state with given details.
 func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface, university string, id string, studentName string, credit int, gradStatus bool) error {
+  // TODO: Implement simulation logic here
   exists, err := s.AssetExists(ctx, id)
   if err != nil {
     return err
@@ -73,7 +92,6 @@ func (s *SmartContract) CreateAsset(ctx contractapi.TransactionContextInterface,
     StudentName:    studentName,
     Credit:         credit,
     GradStatus:     gradStatus,
-    Owner:          university,
   }
   assetJSON, err := json.Marshal(asset)
   if err != nil {
@@ -119,7 +137,6 @@ func (s *SmartContract) UpdateAsset(ctx contractapi.TransactionContextInterface,
     StudentName:    studentName,
     Credit:         credit,
     GradStatus:     gradStatus,
-    Owner:          university,
   }
   assetJSON, err := json.Marshal(asset)
   if err != nil {
@@ -131,6 +148,7 @@ func (s *SmartContract) UpdateAsset(ctx contractapi.TransactionContextInterface,
 
 // DeleteAsset deletes an given asset from the world state.
 func (s *SmartContract) DeleteAsset(ctx contractapi.TransactionContextInterface, id string) error {
+  
   exists, err := s.AssetExists(ctx, id)
   if err != nil {
     return err
@@ -144,6 +162,7 @@ func (s *SmartContract) DeleteAsset(ctx contractapi.TransactionContextInterface,
 
 // AssetExists returns true when asset with given ID exists in world state
 func (s *SmartContract) AssetExists(ctx contractapi.TransactionContextInterface, id string) (bool, error) {
+
   assetJSON, err := ctx.GetStub().GetState(id)
   if err != nil {
     return false, fmt.Errorf("failed to read from world state: %v", err)
@@ -153,25 +172,29 @@ func (s *SmartContract) AssetExists(ctx contractapi.TransactionContextInterface,
 }
 
 // TransferAsset updates the owner field of asset with given id in world state.
-func (s *SmartContract) TransferAsset(ctx contractapi.TransactionContextInterface, id string, newOwner string) error {
+func (s *SmartContract) TransferAsset(ctx contractapi.TransactionContextInterface, id string, newCredits int, newGradStatus bool) error {
   asset, err := s.ReadAsset(ctx, id)
   if err != nil {
     return err
   }
 
-  asset.Owner = newOwner
+  asset.Credit = newCredits
+  asset.GradStatus= newGradStatus
+
   assetJSON, err := json.Marshal(asset)
   if err != nil {
     return err
   }
-
-  return ctx.GetStub().PutState(id, assetJSON)
+  err=ctx.GetStub().PutState(id, assetJSON)
+  if err != nil {
+		return fmt.Errorf("failed to put state: %v", err)
+	}
+  return nil 
 }
+
 
 // GetAllAssets returns all assets found in world state
 func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface) ([]*Asset, error) {
-  // range query with empty string for startKey and endKey does an
-  // open-ended query of all assets in the chaincode namespace.
   resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
   if err != nil {
     return nil, err
@@ -195,4 +218,3 @@ func (s *SmartContract) GetAllAssets(ctx contractapi.TransactionContextInterface
 
   return assets, nil
 }
-
